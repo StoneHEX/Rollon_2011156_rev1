@@ -29,12 +29,9 @@
 #include <sys/time.h>
 #include <termios.h>
 
-#define SEVPORT 5000
-#define MAXDATASIZE  (1024*5)
+#define SERVER_PORT     5000
+#define MAXDATASIZE     512
 
-//#define CLIENT_DEBUG 1
-
-//char buf[MAXDATASIZE];
 char tx_buf[4];
 char rx_buf[MAXDATASIZE];
 FILE    *csv_fp;
@@ -82,7 +79,7 @@ struct sockaddr_in serv_addr;
 	}
 
 	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(SEVPORT);
+	serv_addr.sin_port = htons(SERVER_PORT);
 	serv_addr.sin_addr = *((struct in_addr *)host->h_addr);
 	bzero(&(serv_addr.sin_zero),8);
 
@@ -92,7 +89,7 @@ struct sockaddr_in serv_addr;
 		perror("connect:");
 		exit(1);
 	}
-	printf("Connected\n");
+	printf("Connected on %s : %d\n",server_addr,SERVER_PORT);
 	return sockfd;
 }
 
@@ -133,7 +130,7 @@ void store_data(int loops)
 
 int main(int argc, char *argv[])
 {
-int sockfd;//,sendbytes,recvbytes;
+int sockfd;
 int loops = 0;
 char    file_name[128],c;
 
