@@ -27,6 +27,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <termios.h>
 
 #define SEVPORT 5000
 #define MAXDATASIZE  (1024*5)
@@ -35,13 +36,44 @@
 
 char buf[MAXDATASIZE];
 
+int kbhit(void)
+{
+struct termios oldt, newt;
+int ch;
+int oldf;
+
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+
+    ch = getchar();
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    fcntl(STDIN_FILENO, F_SETFL, oldf);
+
+    if(ch != EOF)
+    {
+        ungetc(ch, stdin);
+        return 1;
+    }
+
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
-	int sockfd,sendbytes,recvbytes;
-	struct hostent *host;
-	struct sockaddr_in serv_addr;
-	int loops = 0;
-	if(argc < 2){
+int sockfd,sendbytes,recvbytes;
+struct hostent *host;
+struct sockaddr_in serv_addr;
+int loops = 0;
+FILE    *csv_fp;
+char    file_name[128],c;
+
+	if(argc < 2)
+	{
 		fprintf(stderr,"Please enter the server's hostname!\n");
 		exit(1);
 	}
@@ -50,12 +82,6 @@ int main(int argc, char *argv[])
 		perror("gethostbyname:");
 		exit(1);
 	}
-#ifdef CLIENT_DEBUG
-	printf("hostent h_name: %s , h_aliases: %s,\
-			h_addrtype: %d, h_length: %d, h_addr_list: %s\n",\
-			host->h_name,*(host->h_aliases),host->h_addrtype,host->h_length,*(host->h_addr_list));
-#endif
-
 	if((sockfd = socket(AF_INET,SOCK_STREAM,0)) == -1){
 		perror("socket:");
 		exit(1);
@@ -73,6 +99,14 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	printf("Connected\n");
+	sprintf(file_name,"sensors.csv");
+	csv_fp = fopen(file_name,"w");
+	if ( csv_fp == NULL )
+	{
+        printf("Error opening %s\n",file_name);
+        exit(-1);
+	}
+
 	while(1)
 	{
         sprintf(buf,"B\n");
@@ -88,6 +122,7 @@ int main(int argc, char *argv[])
             exit(1);
         }
         loops++;
+        fprintf(csv_fp,"%s",buf);
         printf("%d : Client received bytes: %d -> %s",loops,recvbytes,buf);
         usleep(100000);
         sprintf(buf,"L\n");
@@ -103,8 +138,19 @@ int main(int argc, char *argv[])
             exit(1);
         }
         loops++;
+        fprintf(csv_fp,"%s",buf);
         printf("%d : Client received bytes: %d -> %s",loops,recvbytes,buf);
         usleep(100000);
+        if(kbhit())
+        {
+            c = getchar();
+            if ( c == 's' )
+            {
+                printf("Stopped with %c\n", c);
+                close(sockfd);
+                fclose(csv_fp);
+                return 0;
+            }
+        }
 	}
-	close(sockfd);
 }
