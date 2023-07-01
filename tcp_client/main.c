@@ -134,23 +134,23 @@ int sockfd;
 int loops = 0;
 char    file_name[128],c;
 
-	if(argc < 2)
-	{
-		fprintf(stderr,"Please enter the server's hostname!\n");
-		exit(1);
-	}
+    if(argc < 2)
+    {
+        fprintf(stderr,"Please enter the server's hostname!\n");
+        exit(1);
+    }
     sockfd = net_connect(argv[1]);
 
-	sprintf(file_name,"sensors.csv");
-	csv_fp = fopen(file_name,"w");
-	if ( csv_fp == NULL )
-	{
+    sprintf(file_name,"sensors.csv");
+    csv_fp = fopen(file_name,"w");
+    if ( csv_fp == NULL )
+    {
         printf("Error opening %s\n",file_name);
         exit(-1);
-	}
+    }
 
-	while(1)
-	{
+    while(1)
+    {
         if ( get_sensors('B',sockfd) != 0 )
             close_socket_and_file(sockfd,1);
         store_data(loops);
@@ -164,5 +164,5 @@ char    file_name[128],c;
             if ( c == 's' )
                 close_socket_and_file(sockfd,0);
         }
-	}
+    }
 }
