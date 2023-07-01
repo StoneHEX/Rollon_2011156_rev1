@@ -1,0 +1,26 @@
+# depslib dependency file v1.0
+1688125191 source:/Devel/Codeblocks/tcp_client/main.c
+	<stdio.h>
+	<stdlib.h>
+	<unistd.h>
+	<fcntl.h>
+	<string.h>
+	<error.h>
+	<netdb.h>
+	<sys/types.h>
+	<netinet/in.h>
+	<sys/socket.h>
+
+1688138638 source:/Devel/Stm32_12.0/Rollon_2011156_rev1/tcp_client/main.c
+	<stdio.h>
+	<stdlib.h>
+	<unistd.h>
+	<fcntl.h>
+	<string.h>
+	<error.h>
+	<netdb.h>
+	<sys/types.h>
+	<netinet/in.h>
+	<sys/socket.h>
+	<sys/time.h>
+
