@@ -34,7 +34,10 @@
 
 //#define CLIENT_DEBUG 1
 
-char buf[MAXDATASIZE];
+//char buf[MAXDATASIZE];
+char tx_buf[4];
+char rx_buf[MAXDATASIZE];
+FILE    *csv_fp;
 
 int kbhit(void)
 {
@@ -63,22 +66,13 @@ int oldf;
     return 0;
 }
 
-int main(int argc, char *argv[])
+int net_connect(char *server_addr)
 {
-int sockfd,sendbytes,recvbytes;
 struct hostent *host;
+int sockfd;
 struct sockaddr_in serv_addr;
-int loops = 0;
-FILE    *csv_fp;
-char    file_name[128],c;
 
-	if(argc < 2)
-	{
-		fprintf(stderr,"Please enter the server's hostname!\n");
-		exit(1);
-	}
-
-	if((host=gethostbyname(argv[1])) == NULL){
+	if((host=gethostbyname(server_addr)) == NULL){
 		perror("gethostbyname:");
 		exit(1);
 	}
@@ -99,6 +93,57 @@ char    file_name[128],c;
 		exit(1);
 	}
 	printf("Connected\n");
+	return sockfd;
+}
+
+int get_sensors(char sensor,int sockfd)
+{
+int sendbytes,recvbytes;
+    sprintf(tx_buf,"%c",sensor);
+    if((sendbytes = send(sockfd,tx_buf,strlen(tx_buf),0)) == -1){
+        perror("send:");
+        return(1);
+    }
+    bzero(rx_buf,sizeof(rx_buf));
+    if((recvbytes = recv(sockfd, rx_buf,MAXDATASIZE,0)) == -1)
+    {
+        perror("recv");
+        return(1);
+    }
+    return 0;
+}
+
+int close_socket_and_file(int sockfd,int reason)
+{
+    if ( reason == 0 )
+        printf("\nStopped from user\n");
+    else
+        printf("\nStopped for error\n");
+    close(sockfd);
+    fclose(csv_fp);
+    exit (reason);
+}
+
+void store_data(int loops)
+{
+    fprintf(csv_fp,"%s",rx_buf);
+    printf("%d : Client received %s",loops,rx_buf);
+    usleep(100000);
+}
+
+int main(int argc, char *argv[])
+{
+int sockfd;//,sendbytes,recvbytes;
+int loops = 0;
+char    file_name[128],c;
+
+	if(argc < 2)
+	{
+		fprintf(stderr,"Please enter the server's hostname!\n");
+		exit(1);
+	}
+    sockfd = net_connect(argv[1]);
+
 	sprintf(file_name,"sensors.csv");
 	csv_fp = fopen(file_name,"w");
 	if ( csv_fp == NULL )
@@ -109,48 +154,18 @@ char    file_name[128],c;
 
 	while(1)
 	{
-        sprintf(buf,"B\n");
-        if((sendbytes = send(sockfd,buf,strlen(buf),0)) == -1){
-            perror("send:");
-            exit(1);
-        }
-        bzero(buf,sizeof(buf));
-        if((recvbytes = recv(sockfd, buf,MAXDATASIZE,0)) == -1)
-        {
-            perror("recv");
-            close(sockfd);
-            exit(1);
-        }
+        if ( get_sensors('B',sockfd) != 0 )
+            close_socket_and_file(sockfd,1);
+        store_data(loops);
+        if ( get_sensors('L',sockfd) != 0 )
+            close_socket_and_file(sockfd,1);
+        store_data(loops);
         loops++;
-        fprintf(csv_fp,"%s",buf);
-        printf("%d : Client received bytes: %d -> %s",loops,recvbytes,buf);
-        usleep(100000);
-        sprintf(buf,"L\n");
-        if((sendbytes = send(sockfd,buf,strlen(buf),0)) == -1){
-            perror("send:");
-            exit(1);
-        }
-        bzero(buf,sizeof(buf));
-        if((recvbytes = recv(sockfd, buf,MAXDATASIZE,0)) == -1)
-        {
-            perror("recv");
-            close(sockfd);
-            exit(1);
-        }
-        loops++;
-        fprintf(csv_fp,"%s",buf);
-        printf("%d : Client received bytes: %d -> %s",loops,recvbytes,buf);
-        usleep(100000);
         if(kbhit())
         {
             c = getchar();
             if ( c == 's' )
-            {
-                printf("Stopped with %c\n", c);
-                close(sockfd);
-                fclose(csv_fp);
-                return 0;
-            }
+                close_socket_and_file(sockfd,0);
         }
 	}
 }
