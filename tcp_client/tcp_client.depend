@@ -11,7 +11,7 @@
 	<netinet/in.h>
 	<sys/socket.h>
 
-1688138638 source:/Devel/Stm32_12.0/Rollon_2011156_rev1/tcp_client/main.c
+1688370125 source:/Devel/Stm32_12.0/Rollon_2011156_rev1/tcp_client/main.c
 	<stdio.h>
 	<stdlib.h>
 	<unistd.h>
@@ -23,4 +23,5 @@
 	<netinet/in.h>
 	<sys/socket.h>
 	<sys/time.h>
+	<termios.h>
 

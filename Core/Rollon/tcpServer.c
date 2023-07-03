@@ -174,6 +174,9 @@ static err_t tcp_server_recv(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, er
 struct tcp_server_struct *es;
 err_t ret_err;
 char rxdata[20];
+uint8_t	data_len,i;
+#define	BME_TCP_LEN	8
+#define	LSM_TCP_LEN	12
 
 	LWIP_ASSERT("arg != NULL",arg != NULL);
 	es = (struct tcp_server_struct *)arg;
@@ -227,6 +230,7 @@ char rxdata[20];
 		{
 			es->p = p;
 			strcpy(&rxdata[0], p->payload);
+	#ifdef	AASCII_DATA
 			if(rxdata[0]=='B')
 			{
 				bzero(text_data,sizeof(text_data));
@@ -257,7 +261,35 @@ char rxdata[20];
 				es->p->tot_len=es->p->len;
 				es->p->payload = &text_data[0];
 			}
-			tcp_server_send(tpcb, es);
+#else
+#endif
+			if(rxdata[0]=='B')
+			{
+				bzero(text_data,sizeof(text_data));
+				text_data[0] = 'B';
+				data_len=BME_TCP_LEN+1;
+				for(i=1;i<data_len;i++)
+				{
+					text_data[i] = System.bme_data[i-1];
+				}
+			}
+			if(rxdata[0]=='L')
+			{
+				text_data[0] = 'L';
+				data_len=13;
+				data_len=LSM_TCP_LEN+1;
+				for(i=1;i<data_len;i++)
+				{
+					text_data[i] = System.lsm_data[i-1];
+				}
+			}
+			if((rxdata[0]=='B') || (rxdata[0]=='L') )
+			{
+				es->p->len=data_len;
+				es->p->tot_len=es->p->len;
+				es->p->payload = &text_data[0];
+				tcp_server_send(tpcb, es);
+			}
 		}
 		else
 		{

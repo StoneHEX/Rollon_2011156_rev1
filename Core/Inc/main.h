@@ -59,8 +59,8 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define PERIOD_T1 410
-#define HPERIOD_T1 (PERIOD_T1/3)
+#define PERIOD_T1 415
+#define HPERIOD_T1 (PERIOD_T1/2)
 #define HPERIOD_PWR ((PERIOD_T1/10)*9)
 #define LED_FLT_Pin GPIO_PIN_5
 #define LED_FLT_GPIO_Port GPIOE

@@ -33,7 +33,7 @@
 #define MAXDATASIZE     512
 
 char tx_buf[4];
-char rx_buf[MAXDATASIZE];
+unsigned char rx_buf[MAXDATASIZE];
 FILE    *csv_fp;
 
 int kbhit(void)
@@ -93,20 +93,21 @@ struct sockaddr_in serv_addr;
 	return sockfd;
 }
 
-int get_sensors(char sensor,int sockfd)
+int get_sensors(char sensor,int sockfd,int *recvbytes)
 {
-int sendbytes,recvbytes;
+int sendbytes;
     sprintf(tx_buf,"%c",sensor);
     if((sendbytes = send(sockfd,tx_buf,strlen(tx_buf),0)) == -1){
         perror("send:");
         return(1);
     }
     bzero(rx_buf,sizeof(rx_buf));
-    if((recvbytes = recv(sockfd, rx_buf,MAXDATASIZE,0)) == -1)
+    if((*recvbytes = recv(sockfd, rx_buf,MAXDATASIZE,0)) == -1)
     {
         perror("recv");
         return(1);
     }
+    printf("%c %d\n",rx_buf[0],*recvbytes);
     return 0;
 }
 
@@ -121,10 +122,32 @@ int close_socket_and_file(int sockfd,int reason)
     exit (reason);
 }
 
-void store_data(int loops)
+void debug_recvbuf(char sensor,int recvbytes)
 {
-    fprintf(csv_fp,"%s",rx_buf);
-    printf("%d : Client received %s",loops,rx_buf);
+int    i;
+    printf("%c,",sensor);
+    for(i=1;i<recvbytes;i++)
+    {
+        printf("0x%02x",rx_buf[i]);
+        if ( i != recvbytes-1 )
+            printf(",");
+    }
+    printf("\n");
+}
+
+void store_data(int loops,char sensor,int recvbytes)
+{
+int    i;
+    printf("%d : Client received %d bytes for sensor %c\n",loops,recvbytes,sensor);
+    debug_recvbuf(sensor,recvbytes);
+    fprintf(csv_fp,"%c,",sensor);
+    for(i=1;i<recvbytes;i++)
+    {
+        fprintf(csv_fp,"0x%02x",rx_buf[i]);
+        if ( i != recvbytes-1 )
+            fprintf(csv_fp,",");
+    }
+    fprintf(csv_fp,"\n");
     usleep(100000);
 }
 
@@ -133,6 +156,7 @@ int main(int argc, char *argv[])
 int sockfd;
 int loops = 0;
 char    file_name[128],c;
+int     recvbytes;
 
     if(argc < 2)
     {
@@ -151,12 +175,14 @@ char    file_name[128],c;
 
     while(1)
     {
-        if ( get_sensors('B',sockfd) != 0 )
+        if ( get_sensors('B',sockfd,&recvbytes) != 0 )
             close_socket_and_file(sockfd,1);
-        store_data(loops);
-        if ( get_sensors('L',sockfd) != 0 )
+        store_data(loops,'B',recvbytes);
+
+        if ( get_sensors('L',sockfd,&recvbytes) != 0 )
             close_socket_and_file(sockfd,1);
-        store_data(loops);
+        store_data(loops,'L',recvbytes);
+
         loops++;
         if(kbhit())
         {
